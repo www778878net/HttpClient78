@@ -5,3 +5,5 @@
 /.vs
 /HttpClient78/.vs
 /HttpClient78/obj
+/Test78/bin/Debug/net6.0
+/Test78/obj

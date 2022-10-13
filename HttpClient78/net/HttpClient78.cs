@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using NLog;
 using Polly;
 using System;
 using System.Collections.Generic;
@@ -7,6 +9,8 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using www778878net.Log;
+using www778878net.Net.Response;
 
 namespace www778878net.net
 {
@@ -40,6 +44,8 @@ namespace www778878net.net
 		/// </summary>
 		public string? Cookiestr { get; set; }
 		public readonly HttpClient HttpClient;
+		public bool IsDebug { get; set; }
+		public readonly Log78 Logger;
 		#endregion
 
 
@@ -87,6 +93,11 @@ namespace www778878net.net
         public HttpClient78(string sname = "7788")
         {
             HttpClient = HttpClientFactory!.CreateClient(sname);
+			IsDebug = false;
+            Logger = new()
+            {
+                Logger = LogManager.GetCurrentClassLogger()
+            };
         }
 
         public void Dispose()
@@ -95,14 +106,830 @@ namespace www778878net.net
             serviceProvider.Dispose(); 
         }
 
-        
+        /// <summary>
+		/// 返回一个连接
+		/// </summary>
+		/// <returns></returns>
         public static HttpClient CreateHttpClient()
         {
             HttpClient result = HttpClientFactory!.CreateClient("7788");
             return result;
-        } 
- 
-		private async Task<HttpResponseMessage?> InternalRequest<T>(Uri request
+        }
+
+		/// <summary>
+		/// 通过网址下载文件
+		/// </summary>
+		/// <param name="Urlpath"></param>
+		/// <param name="Filepath"></param>
+		/// <returns></returns>
+		public async Task<int> DownFile(string Urlpath, string Filepath)
+		{
+			StreamResponse? tmpstm = await GetToStream(new Uri(Urlpath));
+			if (tmpstm == null || tmpstm.Content == null)
+				return -1;
+			using (Stream stream = tmpstm.Content)
+			{
+				using var fileStream = File.Open(Filepath, FileMode.Create);
+				stream.CopyTo(fileStream);
+			}
+			return 0;
+		}
+
+		public async Task<ObjectResponse<String>?> SendPostStringToString(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, string? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				StreamResponse? response = await SendPostToStream(request, headers, data, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
+
+				if (response?.Content == null)
+				{
+					// Request timed out, try again
+					continue;
+				}
+
+				await using (response.ConfigureAwait(false))
+				{
+					if (response.StatusCode.IsRedirectionCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsClientErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsServerErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						continue;
+					}
+
+					String? obj;
+
+					try
+					{
+						using StreamReader streamReader = new(response.Content);
+						obj = streamReader.ReadToEnd();
+						//using JsonTextReader jsonReader = new(streamReader);
+
+						//JsonSerializer serializer = new();
+						//obj = serializer.Deserialize<T>(jsonReader);
+
+					}
+					catch (Exception e)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new ObjectResponse<string>(response);
+						}
+
+						Logger.Error(e);
+						continue;
+					}
+
+					if (obj is null)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new ObjectResponse<string>(response);
+						}
+						Logger.Error ("obj is null");
+
+						continue;
+					}
+
+					return new ObjectResponse<string>(response, obj);
+				}
+			}
+
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries + request.AbsoluteUri + "失败的请求" + request);
+
+			return null;
+		}
+
+		public async Task<StreamResponse?> SendPostToStream<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, T? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				HttpResponseMessage? response = await PrivatePost(request, headers, data, referer, requestOptions, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+
+				if (response == null)
+				{
+					// Request timed out, try again
+					continue;
+				}
+
+				if (response.StatusCode.IsRedirectionCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+					{
+						return new StreamResponse(response);
+					}
+
+					break;
+				}
+
+				if (response.StatusCode.IsClientErrorCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+					{
+						return new StreamResponse(response);
+					}
+
+					break;
+				}
+
+				if (response.StatusCode.IsServerErrorCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+					{
+						return new StreamResponse(response);
+					}
+
+					continue;
+				}
+
+				return new StreamResponse(response, await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+			}
+
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries + request.AbsoluteUri + "失败的请求" + request);
+
+			return null;
+		}
+
+		public async Task<ObjectResponse<String>?> SendPostToString<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, JObject? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				StreamResponse? response = await SendPostToStream(request, headers, data, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
+
+				if (response?.Content == null)
+				{
+					// Request timed out, try again
+					continue;
+				}
+
+				await using (response.ConfigureAwait(false))
+				{
+					if (response.StatusCode.IsRedirectionCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsClientErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsServerErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						continue;
+					}
+
+					String? obj;
+
+					try
+					{
+						using StreamReader streamReader = new(response.Content);
+						obj = streamReader.ReadToEnd();
+						//using JsonTextReader jsonReader = new(streamReader);
+
+						//JsonSerializer serializer = new();
+						//obj = serializer.Deserialize<T>(jsonReader);
+
+					}
+					catch (Exception e)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new ObjectResponse<string>(response);
+						}
+
+						Logger.Error(e);
+						continue;
+					}
+
+					if (obj is null)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new ObjectResponse<string>(response);
+						}
+						Logger.Error("obj is null");
+
+						continue;
+					}
+
+					return new ObjectResponse<string>(response, obj);
+				}
+			}
+
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries + request.AbsoluteUri + "失败的请求" + request);
+
+			return null;
+		}
+
+		public async Task<BasicResponse?> SendPost<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, T? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				using HttpResponseMessage? response = await PrivatePost(request, headers, data, referer, requestOptions).ConfigureAwait(false);
+
+				if (response == null)
+				{
+					continue;
+				}
+
+				if (response.StatusCode.IsRedirectionCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+					{
+						return new BasicResponse(response);
+					}
+
+					break;
+				}
+
+				if (response.StatusCode.IsClientErrorCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+					{
+						return new BasicResponse(response);
+					}
+
+					break;
+				}
+
+				if (response.StatusCode.IsServerErrorCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+					{
+						return new BasicResponse(response);
+					}
+
+					continue;
+				}
+
+				return new BasicResponse(response);
+			}
+
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries + request.AbsoluteUri + "失败的请求" + request);
+
+			return null;
+		}
+
+		public async Task<BasicResponse?> Head(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				using HttpResponseMessage? response = await PrivateHead(request, headers, referer, requestOptions).ConfigureAwait(false);
+
+				if (response == null)
+				{
+					continue;
+				}
+
+				if (response.StatusCode.IsRedirectionCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+					{
+						return new BasicResponse(response);
+					}
+
+					break;
+				}
+
+				if (response.StatusCode.IsClientErrorCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+					{
+						return new BasicResponse(response);
+					}
+
+					break;
+				}
+
+				if (response.StatusCode.IsServerErrorCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+					{
+						return new BasicResponse(response);
+					}
+
+					continue;
+				}
+
+				return new BasicResponse(response);
+			}
+
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries + request.AbsoluteUri + "失败的请求" + request);
+
+			return null;
+		}
+
+		public async Task<ObjectResponse<String>?> GetToString<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				StreamResponse? response = await GetToStream(request, headers, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
+
+				if (response?.Content == null)
+				{
+					// Request timed out, try again
+					continue;
+				}
+
+				await using (response.ConfigureAwait(false))
+				{
+					if (response.StatusCode.IsRedirectionCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsClientErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsServerErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+						{
+							return new ObjectResponse<String>(response);
+						}
+
+						continue;
+					}
+
+					String? obj;
+
+					try
+					{
+						using StreamReader streamReader = new(response.Content);
+						obj = streamReader.ReadToEnd();
+						//using JsonTextReader jsonReader = new(streamReader);
+
+						//JsonSerializer serializer = new();
+						//obj = serializer.Deserialize<T>(jsonReader);
+
+					}
+					catch (Exception e)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new ObjectResponse<string>(response);
+						}
+
+						Logger.Error(e);
+					 
+						continue;
+					}
+
+					if (obj is null)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new ObjectResponse<string>(response);
+						}
+						Logger.Warn("obj is null");
+
+						continue;
+					}
+
+					return new ObjectResponse<string>(response, obj);
+				}
+			}
+
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries + request.AbsoluteUri + "失败的请求" + request);
+
+			return null;
+		}
+
+		public async Task<ObjectResponse<T>?> GetToJsonObject<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				StreamResponse? response = await GetToStream(request, headers, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
+
+				if (response?.Content == null)
+				{
+					// Request timed out, try again
+					continue;
+				}
+
+				await using (response.ConfigureAwait(false))
+				{
+					if (response.StatusCode.IsRedirectionCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+						{
+							return new ObjectResponse<T>(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsClientErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+						{
+							return new ObjectResponse<T>(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsServerErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+						{
+							return new ObjectResponse<T>(response);
+						}
+
+						continue;
+					}
+
+					T? obj;
+
+					try
+					{
+						using StreamReader streamReader = new(response.Content);
+
+
+						using JsonTextReader jsonReader = new(streamReader);
+
+						JsonSerializer serializer = new();
+						obj = serializer.Deserialize<T>(jsonReader);
+						//JArray jarr = JArray.Parse(obj.ToString());
+					}
+					catch (Exception e)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new ObjectResponse<T>(response);
+						}
+
+						Logger.Error(e);
+						continue;
+					}
+
+					if (obj is null)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new ObjectResponse<T>(response);
+						}
+						Logger.Warn("obj is null");
+
+						continue;
+					}
+
+					return new ObjectResponse<T>(response, obj);
+				}
+			}
+
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries + request.AbsoluteUri + "失败的请求" + request);
+
+			return null;
+		}
+
+		public async Task<StreamResponse?> GetToStream(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				HttpResponseMessage? response = await PrivateGet(request, headers, referer, requestOptions, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+
+				if (response == null)
+				{
+					// Request timed out, try again
+					continue;
+				}
+
+				if (response.StatusCode.IsRedirectionCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+					{
+						return new  StreamResponse(response);
+					}
+
+					break;
+				}
+
+				if (response.StatusCode.IsClientErrorCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+					{
+						return new StreamResponse(response);
+					}
+
+					break;
+				}
+
+				if (response.StatusCode.IsServerErrorCode())
+				{
+					if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+					{
+						return new StreamResponse(response);
+					}
+
+					continue;
+				}
+
+				return new StreamResponse(response, await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+			}
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries + request.AbsoluteUri+ "失败的请求" + request);
+	 
+
+			return null;
+		}
+
+		public async Task<HtmlDocumentResponse?> GetToHtmlDocument(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 500)
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			if (maxTries == 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(maxTries));
+			}
+
+			if (rateLimitingDelay < 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(rateLimitingDelay));
+			}
+
+			for (byte i = 0; i < maxTries; i++)
+			{
+				if ((i > 0) && (rateLimitingDelay > 0))
+				{
+					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
+				}
+
+				StreamResponse? response = await GetToStream(request, headers, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
+
+				if (response?.Content == null)
+				{
+					// Request timed out, try again
+					continue;
+				}
+
+				await using (response.ConfigureAwait(false))
+				{
+					if (response.StatusCode.IsRedirectionCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnRedirections))
+						{
+							return new HtmlDocumentResponse(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsClientErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnClientErrors))
+						{
+							return new HtmlDocumentResponse(response);
+						}
+
+						break;
+					}
+
+					if (response.StatusCode.IsServerErrorCode())
+					{
+						if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors))
+						{
+							return new HtmlDocumentResponse(response);
+						}
+
+						continue;
+					}
+
+					try
+					{
+						return await HtmlDocumentResponse.Create(response).ConfigureAwait(false);
+					}
+					catch (Exception e)
+					{
+						if ((requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnSuccess) && response.StatusCode.IsSuccessCode()) || (requestOptions.HasFlag(ERequestOptions.AllowInvalidBodyOnErrors) && !response.StatusCode.IsSuccessCode()))
+						{
+							return new HtmlDocumentResponse(response);
+						}
+						Logger.Error(e); 
+
+					}
+				}
+			}
+			if (IsDebug)
+				Logger.Debug("请求超过最大次数限制" + maxTries+"失败的请求" + request);
+			return null;
+		}
+
+
+		private async Task<HttpResponseMessage?> PrivatePost<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, T? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead) where T : class
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			return await PrivateRequest(request, HttpMethod.Post, headers, data, referer, requestOptions, httpCompletionOption).ConfigureAwait(false);
+		}
+		private async Task<HttpResponseMessage?> PrivateGet(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead)
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			return await PrivateRequest<object>(request, HttpMethod.Get, headers, null, referer, requestOptions, httpCompletionOption).ConfigureAwait(false);
+		}
+
+		private async Task<HttpResponseMessage?> PrivateHead(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead)
+		{
+			ArgumentNullException.ThrowIfNull(request);
+
+			return await PrivateRequest<object>(request, HttpMethod.Head, headers, null, referer, requestOptions, httpCompletionOption).ConfigureAwait(false);
+		}
+
+		private async Task<HttpResponseMessage?> PrivateRequest<T>(Uri request
 			, HttpMethod httpMethod
 			, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null
 			, T? data = null, Uri? referer = null
@@ -172,8 +999,8 @@ namespace www778878net.net
 						requestMessage.Headers.Referrer = referer;
 					}
 
-
-					await Log78.AddDebug($"{httpMethod} {request}");
+					if(IsDebug)
+						Logger.Debug($"{httpMethod} {request}");
 
 
 					try
@@ -182,7 +1009,7 @@ namespace www778878net.net
 					}
 					catch (Exception e)
 					{
-						//await Log78.AddErr(e);
+						Logger.Error(e);
 
 						return null;
 					}
@@ -197,7 +1024,8 @@ namespace www778878net.net
 				}
 
 
-				await Log78.AddDebug($"{response.StatusCode} <- {httpMethod} {request}");
+				if (IsDebug)
+					Logger.Debug($"{response.StatusCode} <- {httpMethod} {request}");
 
 
 				if (response.IsSuccessStatusCode)
@@ -218,7 +1046,7 @@ namespace www778878net.net
 
 					if (redirectUri == null)
 					{
-						await Log78.AddErrStr("redirectUri is null");
+						Logger.Error("redirectUri is null");
 						return null;
 					}
 
@@ -233,7 +1061,8 @@ namespace www778878net.net
 								return response;
 							default:
 								// We have no clue about those, but maybe HttpClient can handle them for us
-								await Log78.AddErrStr(nameof(redirectUri.Scheme) + redirectUri.Scheme);
+								 
+								Logger.Error(nameof(redirectUri.Scheme) + redirectUri.Scheme);
 
 								break;
 						}
@@ -277,13 +1106,15 @@ namespace www778878net.net
 			}
 
 
-			await Log78.AddDebug($"{response.StatusCode} <- {httpMethod} {request}");
+			if (IsDebug)
+				Logger.Debug($"{response.StatusCode} <- {httpMethod} {request}");
 
 
 			if (response.StatusCode.IsClientErrorCode())
 			{
 
-				await Log78.AddDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+				//if (isDebug)
+				Logger.Error(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
 
 
 				// Do not retry on client errors
@@ -293,7 +1124,7 @@ namespace www778878net.net
 			if (requestOptions.HasFlag(ERequestOptions.ReturnServerErrors) && response.StatusCode.IsServerErrorCode())
 			{
 
-				await Log78.AddDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+				Logger.Error(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
 
 
 				// Do not retry on server errors in this case
@@ -303,7 +1134,8 @@ namespace www778878net.net
 			using (response)
 			{
 
-				await Log78.AddDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+				if (IsDebug)
+					Logger.Debug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
 
 
 				return null;
