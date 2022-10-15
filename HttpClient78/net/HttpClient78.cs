@@ -22,7 +22,7 @@ namespace www778878net.net
 		
 		#region 静态成员
 		/// <summary>
-		/// 
+		/// 单例连接
 		/// </summary>
 		public static HttpClient78 Client78 { get; set; }
         /// <summary>
@@ -43,8 +43,17 @@ namespace www778878net.net
 		/// cookie
 		/// </summary>
 		public string? Cookiestr { get; set; }
+		/// <summary>
+		/// 连接
+		/// </summary>
 		public readonly HttpClient HttpClient;
+		/// <summary>
+		/// 调试
+		/// </summary>
 		public bool IsDebug { get; set; }
+		/// <summary>
+		/// log
+		/// </summary>
 		public readonly Log78 Logger;
 		#endregion
 
@@ -135,7 +144,7 @@ namespace www778878net.net
 			return 0;
 		}
 
-		public async Task<ObjectResponse<String>?> SendPostStringToString(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, string? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
+		public async Task<ObjectResponse<String>?> PostStringToString(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, string? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
 		{
 			ArgumentNullException.ThrowIfNull(request);
 
@@ -156,7 +165,7 @@ namespace www778878net.net
 					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
 				}
 
-				StreamResponse? response = await SendPostToStream(request, headers, data, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
+				StreamResponse? response = await PostToStream(request, headers, data, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
 
 				if (response?.Content == null)
 				{
@@ -240,7 +249,7 @@ namespace www778878net.net
 			return null;
 		}
 
-		public async Task<StreamResponse?> SendPostToStream<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, T? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
+		public async Task<StreamResponse?> PostToStream<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, T? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
 		{
 			ArgumentNullException.ThrowIfNull(request);
 
@@ -308,7 +317,7 @@ namespace www778878net.net
 			return null;
 		}
 
-		public async Task<ObjectResponse<String>?> SendPostToString<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, JObject? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
+		public async Task<ObjectResponse<String>?> PostToString<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, JObject? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
 		{
 			ArgumentNullException.ThrowIfNull(request);
 
@@ -329,7 +338,7 @@ namespace www778878net.net
 					await Task.Delay(rateLimitingDelay).ConfigureAwait(false);
 				}
 
-				StreamResponse? response = await SendPostToStream(request, headers, data, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
+				StreamResponse? response = await PostToStream(request, headers, data, referer, requestOptions | ERequestOptions.ReturnClientErrors, 1, rateLimitingDelay).ConfigureAwait(false);
 
 				if (response?.Content == null)
 				{
@@ -413,7 +422,7 @@ namespace www778878net.net
 			return null;
 		}
 
-		public async Task<BasicResponse?> SendPost<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, T? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
+		public async Task<BasicResponse?> Post<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, T? data = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0) where T : class
 		{
 			ArgumentNullException.ThrowIfNull(request);
 
@@ -547,7 +556,7 @@ namespace www778878net.net
 			return null;
 		}
 
-		public async Task<ObjectResponse<String>?> GetToString<T>(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
+		public async Task<ObjectResponse<String>?> GetToString(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
 		{
 			ArgumentNullException.ThrowIfNull(request);
 
