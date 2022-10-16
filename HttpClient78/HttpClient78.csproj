@@ -4,12 +4,23 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
 
-    <IsPackable>false</IsPackable>
-
-    <RootNamespace>www778878net</RootNamespace>
-
+    <Deterministic>false</Deterministic>
+    <Version>0.0.1.0001</Version>
+    <PackageId>HttpClient78</PackageId>
+    <Authors>Frieda.657225485@qq.com</Authors>
+    <Company>www778878net</Company>
+    <Product>HttpClient78</Product>
+    <Copyright>7788soft</Copyright>
+    <PackageProjectUrl>http://www.778878.net</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/www778878net/HttpClient78.git</RepositoryUrl>
+    <PackageTags>"7788";"www778878net";</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RootNamespace>www778878net</RootNamespace>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>  
   </PropertyGroup>
 
   <ItemGroup>
