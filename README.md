@@ -1,47 +1,47 @@
-<h1 align="center">HttpClient78</h1>
+ï»¿<h1 align="center">HttpClient78</h1>
 <div align="center">
 
 
-¡¸HttpClient78¡¹·â×°HttpClient£¬·½±ãµ÷ÓÃ¡£
+ã€ŒHttpClient78ã€å°è£…HttpClientï¼Œæ–¹ä¾¿è°ƒç”¨ã€‚
 
 [![License](https://img.shields.io/badge/license-Apache%202-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Build Status](https://dev.azure.com/www778878net/basic_csharp/_apis/build/status/www778878net.HttpClient78?branchName=main)](https://dev.azure.com/www778878net/basic_csharp/_build/latest?definitionId=19&branchName=main)
-[![QQÈº](https://img.shields.io/badge/QQÈº-323397913-blue.svg?style=flat-square&color=12b7f5&logo=qq)](https://qm.qq.com/cgi-bin/qm/qr?k=it9gUUVdBEDWiTOH21NsoRHAbE9IAzAO&jump_from=webapi&authKey=KQwSXEPwpAlzAFvanFURm0Foec9G9Dak0DmThWCexhqUFbWzlGjAFC7t0jrjdKdL)
+[![QQç¾¤](https://img.shields.io/badge/QQç¾¤-323397913-blue.svg?style=flat-square&color=12b7f5&logo=qq)](https://qm.qq.com/cgi-bin/qm/qr?k=it9gUUVdBEDWiTOH21NsoRHAbE9IAzAO&jump_from=webapi&authKey=KQwSXEPwpAlzAFvanFURm0Foec9G9Dak0DmThWCexhqUFbWzlGjAFC7t0jrjdKdL)
 
 </div>
 
-## APIÎÄµµµØÖ·£º[http://www.778878.net/docs/](http://www.778878.net/docs/#/HttpClient78/)
-## ·´À¡qqÈº(µã»÷¼ÓÈº)£º[323397913](https://qm.qq.com/cgi-bin/qm/qr?k=it9gUUVdBEDWiTOH21NsoRHAbE9IAzAO&jump_from=webapi&authKey=KQwSXEPwpAlzAFvanFURm0Foec9G9Dak0DmThWCexhqUFbWzlGjAFC7t0jrjdKdL)
+## APIæ–‡æ¡£åœ°å€ï¼š[http://www.778878.net/docs/](http://www.778878.net/docs/#/HttpClient78/)
+## åé¦ˆqqç¾¤(ç‚¹å‡»åŠ ç¾¤)ï¼š[323397913](https://qm.qq.com/cgi-bin/qm/qr?k=it9gUUVdBEDWiTOH21NsoRHAbE9IAzAO&jump_from=webapi&authKey=KQwSXEPwpAlzAFvanFURm0Foec9G9Dak0DmThWCexhqUFbWzlGjAFC7t0jrjdKdL)
 
-## ¼ò½é introduction
+## ç®€ä»‹ introduction
 
-1. ¼òµ¥·â×°HttpClient ¼õÉÙÑ§Ï°³É±¾
-2. Ö§³ÖÊıÖÖ²»Í¬µÄ·µ»ØÖµ
+1. ç®€å•å°è£…HttpClient å‡å°‘å­¦ä¹ æˆæœ¬
+2. æ”¯æŒæ•°ç§ä¸åŒçš„è¿”å›å€¼
 
 
 
-## ÊÊÓÃ¶Ë apply
+## é€‚ç”¨ç«¯ apply
 
 **use for `.net6.0` project**
 
 
 
-## °²×° rely on
+## å®‰è£… rely on
 
-nuget °²×° HttpClient78
+nuget å®‰è£… HttpClient78
 
-## ÊôĞÔ props
+## å±æ€§ props
 
-Ïê¼ûAPIÎÄµµµØÖ·
+è¯¦è§APIæ–‡æ¡£åœ°å€
 
-## ·½·¨ method
+## æ–¹æ³• method
 
-Ïê¼ûAPIÎÄµµµØÖ·
+è¯¦è§APIæ–‡æ¡£åœ°å€
 
 ## DEMO 
 
 ```c#
-//¸ü¶àÊ¾Àı Ïê¼ûÎÄµµÁ´½Ó
+//æ›´å¤šç¤ºä¾‹ è¯¦è§æ–‡æ¡£é“¾æ¥
 using www778878net.Net;
 
 public async void GetToStringTest()
