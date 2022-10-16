@@ -28,11 +28,11 @@ namespace www778878net.net
         /// <summary>
         /// 最大重试次数 (可用于 出错内部重试)
         /// </summary>	
-        public const byte MaxTries = 3;
+        public const  byte MaxTries   = 3;
         /// <summary>
-        /// 10秒超时
+        /// 30秒超时
         /// </summary>
-        public const byte TimeoutSec = 30;
+        public const  byte TimeoutSec  = 30;
         private static readonly ServiceCollection serviceCollection;
         private static readonly ServiceProvider serviceProvider;
         private static readonly IHttpClientFactory? HttpClientFactory;
@@ -40,21 +40,21 @@ namespace www778878net.net
 
 		#region 成员
 		/// <summary>
-		/// cookie
+		/// cookie 字符串
 		/// </summary>
 		public string? Cookiestr { get; set; }
 		/// <summary>
-		/// 连接
+		/// HttpClient连接
 		/// </summary>
-		public readonly HttpClient HttpClient;
+		public HttpClient HttpClient { get; set; }
 		/// <summary>
-		/// 调试
+		/// 是否打印详细调试信息
 		/// </summary>
 		public bool IsDebug { get; set; }
 		/// <summary>
-		/// log
+		/// log78 日志对象
 		/// </summary>
-		public readonly Log78 Logger;
+		public   Log78 Logger { get; set; }
 		#endregion
 
 
@@ -555,7 +555,17 @@ namespace www778878net.net
 
 			return null;
 		}
-
+		/// <summary>
+		/// 获取STRING
+		/// </summary>
+		/// <param name="request">请求URL</param>
+		/// <param name="headers">请求头</param>
+		/// <param name="referer"></param>
+		/// <param name="requestOptions"></param>
+		/// <param name="maxTries">最多重试次数</param>
+		/// <param name="rateLimitingDelay">失败后等待多久重试</param>
+		/// <returns></returns>
+		/// <exception cref="ArgumentOutOfRangeException"></exception>	
 		public async Task<ObjectResponse<String>?> GetToString(Uri request, IReadOnlyCollection<KeyValuePair<string, string>>? headers = null, Uri? referer = null, ERequestOptions requestOptions = ERequestOptions.None, byte maxTries = MaxTries, int rateLimitingDelay = 0)
 		{
 			ArgumentNullException.ThrowIfNull(request);
