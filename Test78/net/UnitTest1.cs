@@ -19,6 +19,18 @@ namespace www778878net.net.Tests
         }
 
         [TestMethod()]
+        public   void DownFile()
+        {
+            string url = "http://www.778878.net/down/test/v.config";
+            string menu = "c:\\downtest\\update\\v.config";
+         
+            HttpClient78.Client78.DownFile(url, menu);
+
+            Thread.Sleep(3000);
+          
+        }
+
+        [TestMethod()]
         public void GetToStreamTest()
         {
            // Assert.Fail();

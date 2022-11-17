@@ -6,9 +6,12 @@ namespace Test78
     {
         private static async void Test()
         {
-            Uri uri = new("http://net.778878.net/apinet/services/Services78/test");
-            var tmp = await HttpClient78.Client78.GetToString(uri);
-            string? getback = tmp!.Content;
+            string url = "http://www.778878.net/down/test/v.config";
+            string menu = "c:\\downtest\\update\\v.config";
+            await HttpClient78.Client78.DownFile(url, menu);
+            //Uri uri = new("http://net.778878.net/apinet/services/Services78/test");
+            //var tmp = await HttpClient78.Client78.GetToString(uri);
+            //string? getback = tmp!.Content;
         }
 
         private static async void Test2()
