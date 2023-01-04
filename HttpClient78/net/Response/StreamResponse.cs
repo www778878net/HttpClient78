@@ -17,9 +17,9 @@ namespace www778878net.Net.Response
 
         private readonly HttpResponseMessage ResponseMessage;
 
-        internal StreamResponse(HttpResponseMessage httpResponseMessage, Stream content) : this(httpResponseMessage) => Content = content ?? throw new ArgumentNullException(nameof(content));
+        public StreamResponse(HttpResponseMessage httpResponseMessage, Stream content) : this(httpResponseMessage) => Content = content ?? throw new ArgumentNullException(nameof(content));
 
-        internal StreamResponse(HttpResponseMessage httpResponseMessage) : base(httpResponseMessage)
+        public StreamResponse(HttpResponseMessage httpResponseMessage) : base(httpResponseMessage)
         {
             ResponseMessage = httpResponseMessage ?? throw new ArgumentNullException(nameof(httpResponseMessage));
             Length = httpResponseMessage.Content.Headers.ContentLength.GetValueOrDefault();

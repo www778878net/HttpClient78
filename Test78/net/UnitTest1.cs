@@ -6,12 +6,36 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using www778878net.Net.Response;
+using Newtonsoft.Json.Linq;
+using System.Security.AccessControl;
 
 namespace www778878net.net.Tests
 {
     [TestClass()]
     public class UnitTest1
     {
+        [TestMethod()]
+        public void test()
+        {
+            Uri uri = new(  "https://m.voc.com.cn/portal/tougao/tougaoUp");
+            JObject obj = new JObject();
+            obj.Add("id", "28840");
+            obj.Add("appid", "122");
+            //IReadOnlyCollection<KeyValuePair<string, string>> keyValuePairs= new List<KeyValuePair<string, string>>();
+            //keyValuePairs.Append(new KeyValuePair<string, string>("id", "28840"));
+            //keyValuePairs.Append(new KeyValuePair<string, string>("appid", "122"));
+            string? getback;
+            for (int i = 0; i < 5000; i++)
+            {
+                var tmp = HttpClient78.Client78.PostToString<IReadOnlyCollection<KeyValuePair<string, string>>>
+           (uri, null, obj);
+                tmp.Wait();
+               getback = tmp.Result!.Content;
+            }
+
+        
+        }
+
         [TestMethod()]
         public void GetToHtmlDocumentTest()
         {
