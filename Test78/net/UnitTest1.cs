@@ -17,22 +17,7 @@ namespace www778878net.net.Tests
         [TestMethod()]
         public void test()
         {
-            Uri uri = new(  "https://m.voc.com.cn/portal/tougao/tougaoUp");
-            JObject obj = new JObject();
-            obj.Add("id", "28840");
-            obj.Add("appid", "122");
-            //IReadOnlyCollection<KeyValuePair<string, string>> keyValuePairs= new List<KeyValuePair<string, string>>();
-            //keyValuePairs.Append(new KeyValuePair<string, string>("id", "28840"));
-            //keyValuePairs.Append(new KeyValuePair<string, string>("appid", "122"));
-            string? getback;
-            for (int i = 0; i < 5000; i++)
-            {
-                var tmp = HttpClient78.Client78.PostToString<IReadOnlyCollection<KeyValuePair<string, string>>>
-           (uri, null, obj);
-                tmp.Wait();
-               getback = tmp.Result!.Content;
-            }
-
+           
         
         }
 
