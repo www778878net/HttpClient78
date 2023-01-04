@@ -32,7 +32,7 @@ namespace www778878net.net
         /// <summary>
         /// 30秒超时
         /// </summary>
-        public const  byte TimeoutSec  = 30;
+        public const  byte TimeoutSec  = 20;
         private static readonly ServiceCollection serviceCollection;
         private static readonly ServiceProvider serviceProvider;
         private static readonly IHttpClientFactory? HttpClientFactory;
